@@ -102,7 +102,7 @@ for name, number, index, layer in frames:
         currentframe = name
         metadata.write("%s frame %i offset = %i\n" % (name, number, index))
 
-    atlas.blit(y, x, layer.as_pymaging())
+    atlas.blit(y + layer.bbox.y1, x + layer.bbox.x1, layer.as_pymaging())
 
     if x + psd.header.width > width:
         y += psd.header.height
