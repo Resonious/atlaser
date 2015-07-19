@@ -28,7 +28,7 @@ print("Going for in %s" % directory)
 def load_psd(f): return (f, PSDImage.load("%s/%s" % (directory, f)))
 
 filenames = sorted(filter(filecheck.match, os.listdir(directory)))
-psdfiles = map(load_psd, filenames)
+psdfiles = list(map(load_psd, filenames))
 
 if len(psdfiles) <= 0:
     print("No matching files were found!")
@@ -41,7 +41,7 @@ unused_image_count = 0
 next_index = 0
 
 for filename, psd in psdfiles:
-    candidates = filter((lambda l: l.name == layername), psd.layers)
+    candidates = list(filter((lambda l: l.name == layername), psd.layers))
 
     if len(candidates) <= 0:
         unused_image_count += 1
