@@ -2,12 +2,13 @@ import os
 import sys
 import re
 import pymaging
+import math
 from pymaging.image import Image
 from pymaging.colors import Color
 from pymaging import colors
 from psd_tools import PSDImage
 
-if len(sys.argv) <= 1 or sys.argv[1].find("help") != -1 or len(sys.argv) < 5:
+if len(sys.argv) <= 1 or sys.argv[1].find("help") != -1 or len(sys.argv) < 4:
     print("usage: `python atlaser.py <directory> <layer name> <output path> [--positioning]`")
     exit(1)
 
@@ -97,11 +98,36 @@ if do_positioning:
     offsets.write("[\n")
 
     for name, number, index, layer in frames:
-        # TODO loop through the pixels in layer.
         # First: find #000000FF pixel - offset from center to this guy is your position
         # Second: find #7D7D7DFF pixel - angle between this guy and previous guy is your angle
         layerimg = layer.as_pymaging()
-        print(layerimg.pixels.get(0, 3))
+        # print(layerimg.pixels.get(0, 3))
+        layer_width  = layer.bbox.x2 - layer.bbox.x1
+        layer_height = layer.bbox.y2 - layer.bbox.y1
+
+        start = None
+        end   = None
+
+        for x in range(0, layer_width):
+            for y in range(0, layer_height):
+                if layerimg.pixels.get(x, y) == [0, 0, 0, 255]:
+                    start = (x, y)
+                elif layerimg.pixels.get(x, y) == [64, 64, 64, 255]:
+                    end = (x, y)
+
+        if start == None or end == None:
+            print("Frame %i does not have both a start and an end" % index)
+            offsets.write("// BAD FRAME\n")
+        else:
+            abs_pos = (
+                layer.bbox.x1 + start[0],
+                # NOTE game coords start from bottom left instead of top left
+                psd.header.height - (layer.bbox.y1 + start[1])
+            )
+            angle = math.atan2(start[1] - end[1], start[0] - end[0]) - 1.570796
+            offsets.write(
+                "    Offset { pos: Vec2<GLfloat> { x: %i.0, y: %i.0 }, angle: %f },\n" % (abs_pos[0], abs_pos[1], angle)
+            )
 
         if x + psd.header.width > width:
             y += psd.header.height
