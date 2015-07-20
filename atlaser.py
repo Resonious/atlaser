@@ -7,8 +7,8 @@ from pymaging.colors import Color
 from pymaging import colors
 from psd_tools import PSDImage
 
-if len(sys.argv) <= 1 or sys.argv[1].find("help") != -1 or len(sys.argv) < 4:
-    print("usage: `python atlaser.py <directory> <layer name> <output path>`")
+if len(sys.argv) <= 1 or sys.argv[1].find("help") != -1 or len(sys.argv) < 5:
+    print("usage: `python atlaser.py <directory> <layer name> <output path> [--positioning]`")
     exit(1)
 
 # Monkey patch cover_with to not divide by output alpha when it ends up 0...
@@ -21,6 +21,7 @@ Color.cover_with = working_cover_with
 directory = sys.argv[1]
 layername = sys.argv[2]
 outpath   = sys.argv[3]
+do_positioning = len(sys.argv) >= 5
 filecheck = re.compile(r"^(\w+)-(\d+)\.psd$")
 
 print("Going for in %s" % directory)
@@ -88,28 +89,47 @@ if height > maxheight:
 
 print("Resulting atlas will be %ix%i pixels" % (width, height))
 
-atlas = Image.new(colors.RGBA, width, height, Color.from_hexcode("#00000000"))
-
 x = 0
 y = 0
 
-metadata_filename = outpath + ".info"
-metadata = open(metadata_filename, "w")
-currentframe = None
+if do_positioning:
+    offsets = open(outpath, "w")
+    offsets.write("[\n")
 
-for name, number, index, layer in frames:
-    if name != currentframe:
-        currentframe = name
-        metadata.write("%s frame %i offset = %i\n" % (name, number, index))
+    for name, number, index, layer in frames:
+        # TODO loop through the pixels in layer.
+        # First: find #000000FF pixel - offset from center to this guy is your position
+        # Second: find #7D7D7DFF pixel - angle between this guy and previous guy is your angle
+        layerimg = layer.as_pymaging()
+        print(layerimg.pixels.get(0, 3))
 
-    atlas.blit(y + layer.bbox.y1, x + layer.bbox.x1, layer.as_pymaging())
+        if x + psd.header.width > width:
+            y += psd.header.height
+            x = 0
+        else:
+            x += psd.header.width
 
-    if x + psd.header.width > width:
-        y += psd.header.height
-        x = 0
-    else:
-        x += psd.header.width
+    offsets.write("];\n")
+else:
+    atlas = Image.new(colors.RGBA, width, height, Color.from_hexcode("#00000000"))
 
-metadata.close()
-atlas.save_to_path(outpath)
-print("Saved atlas to %s" % outpath)
+    metadata_filename = outpath + ".info"
+    metadata = open(metadata_filename, "w")
+    currentframe = None
+
+    for name, number, index, layer in frames:
+        if name != currentframe:
+            currentframe = name
+            metadata.write("%s frame %i offset = %i\n" % (name, number, index))
+
+        atlas.blit(y + layer.bbox.y1, x + layer.bbox.x1, layer.as_pymaging())
+
+        if x + psd.header.width > width:
+            y += psd.header.height
+            x = 0
+        else:
+            x += psd.header.width
+
+    metadata.close()
+    atlas.save_to_path(outpath)
+    print("Saved atlas to %s" % outpath)
