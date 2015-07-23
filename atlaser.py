@@ -126,7 +126,7 @@ if do_positioning:
             )
             angle = math.atan2(start[1] - end[1], start[0] - end[0]) - 1.570796
             offsets.write(
-                "    Offset { pos: Vec2<GLfloat> { x: %i.0, y: %i.0 }, angle: %f },\n" % (abs_pos[0], abs_pos[1], angle)
+                "    Offset { pos: Vec2::<GLfloat> { x: %i.0, y: %i.0 }, angle: %f },\n" % (abs_pos[0], abs_pos[1], angle)
             )
 
         if x + psd.header.width > width:
